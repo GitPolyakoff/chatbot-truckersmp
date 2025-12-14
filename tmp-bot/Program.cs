@@ -1,30 +1,21 @@
-﻿using System;
+﻿using GroqApiLibrary;
+using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using RestSharp;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using RestSharp;
 using WindowsInput;
 using WindowsInput.Native;
-using GroqApiLibrary;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
 
 namespace ChatBot
 {
     class Program
     {
-        // ----------------- GPT CONFIG -----------------
         private static GroqApiClient _gptClient;
         private static List<JObject> _gptHistory = new List<JObject>();
-        // ----------------- CONFIG -----------------
-        private const string OPENWEATHERMAP_API_KEY = "YOUR_OPENWEATHERMAP_API_KEY";
         private const string TRUCKERSMP_API_BASE = "https://api.truckersmp.com/v2";
         private static string ChatLogPath = "";
         private static string[] windowTitles = new[] { "Euro Truck Simulator 2 Multiplayer", "American Truck Simulator" };
@@ -34,7 +25,9 @@ namespace ChatBot
         private const int MESSAGES_PER_MIN = 60;
         private static Queue<DateTime> sentTimestamps = new Queue<DateTime>();
         private static Regex chatLineRegex = new Regex(@"\[(?<channel>.+?)\]\s+\[(?<time>\d{2}:\d{2}:\d{2})\]\s+(?<nick>.+?)\s+\((?<id>\d+)\):\s+(?<message>.+)", RegexOptions.Compiled);
-        // ------------------------------------------
+        private static string GroqApiKey = "";
+        private static string BannedWordsPath = "";
+        private static readonly string ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "bot_config.txt");
 
         private static string DetectChatLogPath()
         {
@@ -116,7 +109,6 @@ namespace ChatBot
             Console.WriteLine("🔍 Checking API connectivity...");
             
             bool groqConnected = false;
-            bool weatherConnected = false;
             
             try
             {
@@ -138,29 +130,9 @@ namespace ChatBot
             {
                 Console.WriteLine($"❌ Groq API: Error - {ex.Message}");
             }
-            
-            try
-            {
-                // Test OpenWeather API
-                var weather = await GetWeatherAsync("London");
-                
-                if (weather != null)
-                {
-                    Console.WriteLine("✅ OpenWeather API: Connected");
-                    weatherConnected = true;
-                }
-                else
-                {
-                    Console.WriteLine("❌ OpenWeather API: Failed to get response");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"❌ OpenWeather API: Error - {ex.Message}");
-            }
 
             Console.WriteLine("--------------------------------");
-            return groqConnected || weatherConnected; // Return true if at least one API works
+            return groqConnected;
         }
 
         static void Main(string[] args)
@@ -168,13 +140,10 @@ namespace ChatBot
             Console.OutputEncoding = Encoding.UTF8;
             Console.WriteLine("🤖 Polyakoff ChatBot Starting...");
             Console.WriteLine("--------------------------------");
-            
-            // load secrets.json
-            var config = new ConfigurationBuilder().AddUserSecrets<Program>().Build();
-            string groqAiKey = config.GetSection("GROQ_API_KEY").Value;
-            _gptClient = new GroqApiClient(groqAiKey);
 
-            // Check API connectivity
+            LoadOrRequestConfig();
+            _gptClient = new GroqApiClient(GroqApiKey);
+
             bool apiConnected = CheckApiConnectivity().GetAwaiter().GetResult();
             if (!apiConnected)
             {
@@ -258,29 +227,8 @@ namespace ChatBot
 
             switch (cmd)
             {
-                case "!weather":
-                    if (string.IsNullOrWhiteSpace(arg))
-                    {
-                        EnqueueBotMessage($"@{id} 🌤️ Usage: !weather <city> — example: !weather London");
-                    }
-                    else
-                    {
-                        var weather = await GetWeatherAsync(arg).ConfigureAwait(false);
-                        if (weather != null)
-                        {
-                            EnqueueBotMessage(
-                                $"@{id} 🌍 {weather.Name}: {char.ToUpper(weather.WeatherDescription[0]) + weather.WeatherDescription.Substring(1)} {GetWeatherEmoji(weather.WeatherDescription)} | 🌡️ {weather.TempC:F1}°C (feels {weather.FeelsLikeC:F1}°C) | 💧 {weather.Humidity}% | 🌬️ {weather.WindSpeed} m/s | 📊 {weather.Pressure} hPa"
-                            );
-                        }
-                        else
-                        {
-                            EnqueueBotMessage($"@{id} ❌ Could not fetch weather. Check city name or API key.");
-                        }
-                    }
-                    break;
-
                 case "!help":
-                    EnqueueBotMessage($"@{id} 🤖 Hello! I am PolyakoffBot v2. Commands: !help, !weather <city>, !gpt <question>, !serverinfo, !players, !version, !socials, !events.");
+                    EnqueueBotMessage($"@{id} 🤖 Hello! I am PolyakoffBot v3. Commands: !help, !gpt <question>, !serverinfo, !players, !version, !socials, !events.");
                     break;
 
                 case "!serverinfo":
@@ -316,7 +264,7 @@ namespace ChatBot
                     break;
 
                 case "!socials":
-                    EnqueueBotMessage($"@{id} 🔗 Our discord nickname: polyakoff & lrnsxgod | Github: github.com/GitPolyakoff & github.com/lrnsxdev |");
+                    EnqueueBotMessage($"@{id} 🔗 Our discord nickname: polyakoff & lrnsxgod | Github: github.com/GitPolyakoff & github.com/lrnsxdev");
                     break;
 
                 case "!events":
@@ -336,16 +284,22 @@ namespace ChatBot
                     }
                     else
                     {
-                        string hiddenPrompt = arg + "\n\n(Answer in the language of the question, very briefly in 1 sentences." +
-                            "NO profanity, swearing, or inappropriate language;" +
-                            "NO insults, threats, or discrimination;" +
-                            "NO political discussions or extreme views;" +
-                            "NO references to drugs, illegal substances, or sexual content;" +
-                            "NO N-Words;" +
-                            "NO personal information sharing;" +
-                            "Keep responses friendly, helpful, and appropriate for all ages;" +
-                            "If asked about inappropriate topics, politely decline and suggest appropriate alternatives.)";
-                        string reply = await GenerateGptResponse(hiddenPrompt);
+
+                        string[] bannedWords = File.Exists(BannedWordsPath)
+                            ? File.ReadAllLines(BannedWordsPath)
+                                .Where(line => !string.IsNullOrWhiteSpace(line))
+                                .Select(line => line.Trim().ToLower())
+                                .ToArray()
+                            : Array.Empty<string>();
+
+                        if (IsBannedContent(arg, bannedWords))
+                        {
+                            Console.WriteLine($"⚠️ Banned word detected in user command from @{id}.");
+                            EnqueueBotMessage($"@{id} 🤖 I will not answer this question.");
+                            break;
+                        }
+
+                        string reply = await GenerateGptResponse(arg);
                         EnqueueBotMessage($"@{id} 🤖 GPT: {reply}");
                     }
                     break;
@@ -382,8 +336,6 @@ namespace ChatBot
                 Thread.Sleep(500);
             }
         }
-
-        // ------- API helper methods (TruckersMP + OpenWeather) -------
 
         private static async Task<List<ServerDto>> GetServersAsync()
         {
@@ -440,39 +392,6 @@ namespace ChatBot
             return null;
         }
 
-        private static async Task<WeatherResult> GetWeatherAsync(string city)
-        {
-            if (string.IsNullOrWhiteSpace(OPENWEATHERMAP_API_KEY)) return null;
-
-            var client = new RestClient("https://api.openweathermap.org");
-            var request = new RestRequest("/data/2.5/weather", Method.Get);
-            request.AddParameter("q", city);
-            request.AddParameter("appid", OPENWEATHERMAP_API_KEY);
-            request.AddParameter("units", "metric");
-
-            var j = await SafeApiCallAsync<dynamic>(client, request);
-            if (j == null) return null;
-
-            try
-            {
-                return new WeatherResult
-                {
-                    Name = (string)j.name,
-                    TempC = (double)j.main.temp,
-                    FeelsLikeC = (double)j.main.feels_like,
-                    Humidity = (int)j.main.humidity,
-                    Pressure = (int)j.main.pressure,
-                    WindSpeed = (double)j.wind.speed,
-                    WeatherDescription = (string)j.weather[0].description
-                };
-            }
-            catch
-            {
-                Console.WriteLine("❌ Failed to parse weather data");
-                return null;
-            }
-        }
-
 
         private static async Task<T?> SafeApiCallAsync<T>(RestClient client, RestRequest request)
         {
@@ -489,17 +408,58 @@ namespace ChatBot
             }
         }
 
+        private static void LoadOrRequestConfig()
+        {
+            if (File.Exists(ConfigFilePath))
+            {
+                var lines = File.ReadAllLines(ConfigFilePath);
+
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("GROQ_API_KEY=", StringComparison.OrdinalIgnoreCase))
+                        GroqApiKey = line.Substring("GROQ_API_KEY=".Length).Trim();
+
+                    if (line.StartsWith("BANNED_WORDS_PATH=", StringComparison.OrdinalIgnoreCase))
+                        BannedWordsPath = line.Substring("BANNED_WORDS_PATH=".Length).Trim();
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(GroqApiKey))
+            {
+                Console.Write("🔑 Enter GROQ API key (create it at https://console.groq.com/keys): ");
+                GroqApiKey = Console.ReadLine()?.Trim();
+            }
+
+            while (string.IsNullOrWhiteSpace(BannedWordsPath) || !File.Exists(BannedWordsPath))
+            {
+                Console.Write("📄 Enter FULL path to banned_words.txt (example: C:\\Users\\YourName\\Desktop\\banned_words.txt): ");
+                BannedWordsPath = Console.ReadLine()?.Trim();
+
+                if (!File.Exists(BannedWordsPath))
+                    Console.WriteLine("❌ File not found. Try again.");
+            }
+
+            File.WriteAllLines(ConfigFilePath, new[]
+            {
+                $"GROQ_API_KEY={GroqApiKey}",
+                $"BANNED_WORDS_PATH={BannedWordsPath}"
+            });
+
+            Console.WriteLine($"✅ Config loaded (saved to {ConfigFilePath})");
+        }
+
+
         private static async Task<string> GenerateGptResponse(string userInput)
         {
-            string hiddenInstruction = " (Respond in the same language as the question, very concise: 1 short sentences only." +
-                "NO profanity, swearing, or inappropriate language;" +
-                "NO insults, threats, or discrimination;" +
-                "NO political discussions or extreme views;" +
-                "NO references to drugs, illegal substances, or sexual content;" +
-                "NO N-Words;" +
-                "NO personal information sharing;" +
-                "Keep responses friendly, helpful, and appropriate for all ages;" +
-                "If asked about inappropriate topics, politely decline and suggest appropriate alternatives.)";
+            string hiddenInstruction = " (Respond in the same language as the question, very concise: 1 short sentence only." +
+                " NO profanity, swearing, or inappropriate language;" +
+                " NO insults, threats, or discrimination;" +
+                " NO political discussions or extreme views;" +
+                " NO references to drugs, illegal substances, or sexual content;" +
+                " NO N-Words;" +
+                " NO personal information sharing;" +
+                " Keep responses friendly, helpful, and appropriate for all ages;" +
+                " If asked about inappropriate topics, politely decline and suggest appropriate alternatives.)";
 
             _gptHistory.Add(new JObject
             {
@@ -520,6 +480,20 @@ namespace ChatBot
             var response = await _gptClient.CreateChatCompletionAsync(request);
             string? aiResponse = response?["choices"]?[0]?["message"]?["content"]?.ToString();
 
+            string[] bannedWords = File.Exists(BannedWordsPath)
+                ? File.ReadAllLines(BannedWordsPath)
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .Select(line => line.Trim().ToLower())
+                    .ToArray()
+                : Array.Empty<string>();
+
+
+            if (!string.IsNullOrEmpty(aiResponse) && IsBannedContent(aiResponse, bannedWords))
+            {
+                Console.WriteLine("⚠️ Banned word detected in GPT response.");
+                aiResponse = "I will not answer this question.";
+            }
+
             if (!string.IsNullOrEmpty(aiResponse))
             {
                 _gptHistory.Add(new JObject
@@ -530,6 +504,25 @@ namespace ChatBot
             }
 
             return aiResponse ?? "(no response)";
+        }
+
+        private static bool IsBannedContent(string text, string[] bannedWords)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+
+            string normalized = Regex.Replace(text.ToLower(), @"[!@#$%^&*()\[\]{}|\\;:'"",.<>?/0-9_\-\s]+", "", RegexOptions.Compiled);
+
+            foreach (string banned in bannedWords)
+            {
+                if (string.IsNullOrWhiteSpace(banned)) continue;
+
+                string pattern = string.Join(@"[\W_0-9]*", banned.Select(c => Regex.Escape(c.ToString())));
+                if (Regex.IsMatch(normalized, pattern, RegexOptions.IgnoreCase))
+                    return true;
+            }
+
+            return false;
         }
 
         public static bool SendChatMessageToGame(string message)
@@ -556,19 +549,19 @@ namespace ChatBot
                 if (hWnd == IntPtr.Zero) return false;
 
                 SetForegroundWindow(hWnd);
-                Thread.Sleep(200);
+                Thread.Sleep(500);
 
                 SetClipboardText(message);
-                Thread.Sleep(300);
+                Thread.Sleep(600);
 
                 sim.Keyboard.KeyPress(VirtualKeyCode.VK_Y);
-                Thread.Sleep(150);
+                Thread.Sleep(500);
 
                 sim.Keyboard.ModifiedKeyStroke(VirtualKeyCode.CONTROL, VirtualKeyCode.VK_V);
-                Thread.Sleep(50);
+                Thread.Sleep(300);
 
                 sim.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-                Thread.Sleep(100);
+                Thread.Sleep(300);
 
                 return true;
             }
@@ -596,19 +589,6 @@ namespace ChatBot
             }
         }
 
-        private static string GetWeatherEmoji(string desc)
-        {
-            desc = desc.ToLower();
-            if (desc.Contains("clear")) return "☀️";
-            if (desc.Contains("cloud")) return "☁️";
-            if (desc.Contains("rain")) return "🌧️";
-            if (desc.Contains("drizzle")) return "🌦️";
-            if (desc.Contains("thunder")) return "⛈️";
-            if (desc.Contains("snow")) return "❄️";
-            if (desc.Contains("mist") || desc.Contains("fog")) return "🌫️";
-            return "🌍";
-        }
-
         private static IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName) => FindWindow(null, lpWindowName);
 
         [DllImport("user32.dll", SetLastError = true)] private static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
@@ -618,18 +598,6 @@ namespace ChatBot
         [DllImport("user32.dll", SetLastError = true)] private static extern bool EmptyClipboard();
         [DllImport("user32.dll", SetLastError = true)] private static extern IntPtr SetClipboardData(uint uFormat, IntPtr hMem);
 
-        private class WeatherResult
-        {
-            public string Name { get; set; }
-            public double TempC { get; set; }
-            public double FeelsLikeC { get; set; }
-            public int Humidity { get; set; }
-            public int Pressure { get; set; }
-            public double WindSpeed { get; set; }
-            public string WeatherDescription { get; set; }
-        }
-
-        // ====== DTO classes ======
         public class ServerDto
         {
             [JsonProperty("id")] public int Id { get; set; }

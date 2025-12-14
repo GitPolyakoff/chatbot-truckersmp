@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("tmp-bot")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f0e4cfef3f44690481d8041f51ca6daca4b44fb8")]
 [assembly: System.Reflection.AssemblyProductAttribute("tmp-bot")]
 [assembly: System.Reflection.AssemblyTitleAttribute("tmp-bot")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

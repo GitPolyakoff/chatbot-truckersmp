@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj": {}
+    "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj": {
+    "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj",
+        "projectUniqueName": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj",
         "projectName": "tmp-bot",
-        "projectPath": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj",
+        "projectPath": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj",
         "packagesPath": "C:\\Users\\Илья Поляков\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\obj\\",
+        "outputPath": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

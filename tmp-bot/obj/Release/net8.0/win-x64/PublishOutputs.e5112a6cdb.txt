@@ -1,0 +1,2 @@
+C:\Users\Илья Поляков\Desktop\chatbot-truckersmp\tmp-bot\bin\Release\net8.0\win-x64\publish\tmp-bot.pdb
+C:\Users\Илья Поляков\Desktop\chatbot-truckersmp\tmp-bot\bin\Release\net8.0\win-x64\publish\tmp-bot.exe

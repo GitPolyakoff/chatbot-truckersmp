@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "6bCxNufHKGE=",
+  "dgSpecHash": "2buRZPqIOw0=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj",
+  "projectFilePath": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Илья Поляков\\.nuget\\packages\\inputsimulator\\1.0.4\\inputsimulator.1.0.4.nupkg.sha512",
     "C:\\Users\\Илья Поляков\\.nuget\\packages\\microsoft.extensions.configuration\\6.0.0\\microsoft.extensions.configuration.6.0.0.nupkg.sha512",
@@ -25,9 +25,9 @@
       "code": "NU1701",
       "level": "Warning",
       "message": "Пакет \"InputSimulator 1.0.4\" был восстановлен с помощью \".NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1\", а не целевой платформы проекта \"net8.0\". Этот пакет может быть не полностью совместим с вашим проектом.",
-      "projectPath": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj",
+      "projectPath": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\Илья Поляков\\Desktop\\tmp-bot\\tmp-bot\\tmp-bot\\tmp-bot.csproj",
+      "filePath": "C:\\Users\\Илья Поляков\\Desktop\\chatbot-truckersmp\\tmp-bot\\tmp-bot.csproj",
       "libraryId": "InputSimulator",
       "targetGraphs": [
         "net8.0"
