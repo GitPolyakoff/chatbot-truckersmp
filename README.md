@@ -2,79 +2,46 @@
 
 A simple chat bot for **TruckersMP** (ETS2 / ATS).  
 This bot reads your chat log file and can respond with useful commands.  
-It also connects to **OpenWeatherMap** for live weather and to **Groq API (LLaMA model)** for AI answers.
+It also connects to **Groq API (LLaMA model)** for AI answers.
 
 ---
 
 ## ✨ Features
-- `!weather <city>` → shows current weather (temperature, feels like, pressure, clouds, wind, sunrise, sunset).  
 - `!gpt <text>` → ask AI (LLaMA model via Groq API). The bot will answer in the same language as the question.  
 - Works inside the TruckersMP chat (reads the log file).  
+- Filters messages using a **banned words list** to prevent inappropriate content.  
 - Lightweight and easy to use.  
 
 ---
 
-## 🛠️ Setup for Developers
+## 🚀 Usage
 
-### 1. Clone repository
-```bash
-git clone https://github.com/GitPolyakoff/chatbot-truckersmp.git
-```
-## 2. Configure API keys
+1. Download the following files:
+   - `tmp-bot.exe`
+   - `banned_words.txt`
 
-- Open `Program.cs`
-Find this line:
-```bash
-private const string OPENWEATHERMAP_API_KEY = "YOUR_OPENWEATHERMAP_API_KEY";
-```
+2. Place both files in the same folder (recommended: Desktop).
 
-Get your key here 👉 [OpenWeatherMap](https://openweathermap.org/api)
+3. Run `tmp-bot.exe`.
 
-- Open `secrets.json`
-(Right click on the `common/config` project → **Manage User Secrets**)
-Insert your Groq key:
-```bash
-{
-  "GROQ_API_KEY": "YOUR_GROQ_API_KEY"
-}
-```
+4. On first launch, the app will ask for:
+   - **Groq API key** (create one at [Groq Console](https://console.groq.com/keys))
+   - **Path to `banned_words.txt`**  
+     Example:
+     ```
+     C:\Users\YourName\Desktop\banned_words.txt
+     ```
 
-
-Get your key here 👉 [Groq Console](https://console.groq.com/keys)
-
-## 3. Build & Run
-
-Compile the project and start the bot:
-```bash
-\tmp-bot\tmp-bot\bin\Debug\net8.0\tmp-bot.exe
-```
----
-
-**🚀 Usage**
-
-- Run the game with TruckersMP.
-
-- Run the bot.
-
-- In chat, type commands:
-
-- `!weather Paris` → shows weather in Paris.
-
-- `!gpt hello` → ask AI.
+5. The app will save this configuration automatically. On subsequent launches, no input is required.
 
 ---
 
 ## 🔹 Bot Commands (examples)
+
 `!help`
 ```bash
 User: !help
-Bot: 🤖 Hello! I am PolyakoffBot v2, ready to assist you. Commands: !help, !weather <city>, !gpt <question>, !serverinfo, !players, !version, !socials, !events.
-```
-
-`!weather <city>`
-```bash
-User: !weather London
-Bot: 🌍 London: Light rain 🌧️ | 🌡️ 14.3°C (feels 12.7°C) | 💧 82% | 🌬️ 5.1 m/s | 📊 1015 hPa
+Bot: 🤖 Hello! I am PolyakoffBot v3, ready to assist you. Commands: !help, !gpt <question>, !serverinfo, !players, !version, !socials, !events.
 ```
 
 `!gpt <your message>`
@@ -115,6 +82,15 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 
 ---
 
+## 🛡 Content Filtering
+
+- Detects full words and word fragments
+- Ignores symbols, spaces, numbers, and obfuscation (`f@ck`, `n1gga`, `sh!t`, etc.)
+- Works in multiple languages
+- Ensures the bot never outputs prohibited words
+  
+---
+
 ## 👥 Credits
 
 **Developers:**
@@ -130,10 +106,13 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 
 ---
 
+
 ## 📌 Notes
 
 - Answers from GPT are short (1–2 sentences), because game chat has limited space.
 
 - The bot only works while the log file is updating (so you must be in TruckersMP).
+
+- The app automatically saves the API key and banned words path on first launch for future use.
 
 ---
