@@ -121,4 +121,3 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 
 - The app automatically saves the API key and banned words path on first launch for future use.
 
----
