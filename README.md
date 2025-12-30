@@ -6,7 +6,6 @@ It also connects to **Groq API (LLaMA model)** for AI answers.
 
 <div align="center">
   <img src="https://visitor-badge.laobi.icu/badge?page_id=GitPolyakoff.chatbot-truckersmp" />
-  <img src="https://img.shields.io/badge/Downloads-67-blue?style=flat&logo=icloud" />
   <img src="https://img.shields.io/github/stars/GitPolyakoff/chatbot-truckersmp?style=flat&logo=github&label=stars" />   
 </div>
 
