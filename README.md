@@ -41,6 +41,14 @@ It also connects to **Groq API (LLaMA model)** for AI answers.
 
 ---
 
+## 🖼 Screenshots
+
+<img width="619" height="368" alt="image" src="https://github.com/user-attachments/assets/e2641981-ea73-4122-ba40-83ad96eb6322" />
+
+<img width="609" height="376" alt="image" src="https://github.com/user-attachments/assets/1f918bdc-c0e1-406f-a152-c49909b8da5d" />
+
+---
+
 ## 🔹 Bot Commands (examples)
 
 `!help`
@@ -111,7 +119,6 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 
 ---
 
-
 ## 📌 Notes
 
 - Answers from GPT are short (1–2 sentences), because game chat has limited space.
@@ -119,5 +126,3 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 - The bot only works while the log file is updating (so you must be in TruckersMP).
 
 - The app automatically saves the API key and banned words path on first launch for future use.
-
----
