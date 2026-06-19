@@ -15,7 +15,7 @@ namespace ChatBot
     class Program
     {
         private static OpenRouterApiClient _gptClient;
-        private static List<JObject> _gptHistory = new List<JObject>();
+        private static ConcurrentDictionary<string, List<JObject>> _userGptHistories = new ConcurrentDictionary<string, List<JObject>>();
         private const string TRUCKERSMP_API_BASE = "https://api.truckersmp.com/v2";
         private static string ChatLogPath = "";
         private static string[] windowTitles = new[] { "Euro Truck Simulator 2 Multiplayer", "American Truck Simulator" };
@@ -115,7 +115,7 @@ namespace ChatBot
             try
             {
                 string testPrompt = "Hello";
-                string response = await GenerateGptResponse(testPrompt);
+                string response = await GenerateGptResponse("system_test", testPrompt);
 
                 if (!string.IsNullOrEmpty(response) && response != "(no response)" && response != "I will not answer this question.")
                 {
@@ -300,7 +300,7 @@ namespace ChatBot
                             break;
                         }
 
-                        string reply = await GenerateGptResponse(arg);
+                        string reply = await GenerateGptResponse(id, arg);
                         EnqueueBotMessage($"@{id} 🤖 GPT: {reply}");
                     }
                     break;
@@ -472,25 +472,27 @@ namespace ChatBot
             Console.WriteLine($"   - Max Tokens: {MaxTokens}");
         }
 
-        private static async Task<string> GenerateGptResponse(string userInput)
+        private static async Task<string> GenerateGptResponse(string userId, string userInput)
         {
-            _gptHistory.Add(new JObject
+            var userHistory = _userGptHistories.GetOrAdd(userId, _ => new List<JObject>());
+
+            userHistory.Add(new JObject
             {
                 ["role"] = "user",
                 ["content"] = userInput
             });
 
             int maxMessagesSize = 4;
-            if (_gptHistory.Count > maxMessagesSize)
-                _gptHistory.RemoveRange(0, _gptHistory.Count - maxMessagesSize);
+            if (userHistory.Count > maxMessagesSize)
+                userHistory.RemoveRange(0, userHistory.Count - maxMessagesSize);
 
             var messagesToSend = new JArray();
 
-            for (int i = 0; i < _gptHistory.Count; i++)
+            for (int i = 0; i < userHistory.Count; i++)
             {
-                var msg = (JObject)_gptHistory[i].DeepClone();
+                var msg = (JObject)userHistory[i].DeepClone();
 
-                if (i == _gptHistory.Count - 1 && msg["role"]?.ToString() == "user")
+                if (i == userHistory.Count - 1 && msg["role"]?.ToString() == "user")
                 {
                     string strictRule = " (Strict rule: Reply in the same language as the user. 1 very short sentence. Max 15 words. NO newlines. Be friendly.)";
                     msg["content"] = msg["content"]?.ToString() + strictRule;
@@ -525,11 +527,11 @@ namespace ChatBot
 
             if (IsBannedContent(aiResponse, bannedWords))
             {
-                Console.WriteLine("⚠️ Banned word detected in GPT response.");
+                Console.WriteLine($"⚠️ Banned word detected in GPT response for user {userId}.");
                 aiResponse = "I will not answer this question.";
             }
 
-            _gptHistory.Add(new JObject
+            userHistory.Add(new JObject
             {
                 ["role"] = "assistant",
                 ["content"] = aiResponse
