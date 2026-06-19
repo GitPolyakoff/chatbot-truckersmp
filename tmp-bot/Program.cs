@@ -1,4 +1,4 @@
-﻿using GroqApiLibrary;
+﻿using ChatBot;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -14,7 +14,7 @@ namespace ChatBot
 {
     class Program
     {
-        private static GroqApiClient _gptClient;
+        private static OpenRouterApiClient _gptClient;
         private static List<JObject> _gptHistory = new List<JObject>();
         private const string TRUCKERSMP_API_BASE = "https://api.truckersmp.com/v2";
         private static string ChatLogPath = "";
@@ -22,11 +22,13 @@ namespace ChatBot
         private static readonly InputSimulator sim = new InputSimulator();
         private static int tailSleepMs = 50;
         private static BlockingCollection<string> sendQueue = new BlockingCollection<string>(new ConcurrentQueue<string>());
-        private const int MESSAGES_PER_MIN = 60;
+        private const int MESSAGES_PER_MIN = 20;
         private static Queue<DateTime> sentTimestamps = new Queue<DateTime>();
         private static Regex chatLineRegex = new Regex(@"\[(?<channel>.+?)\]\s+\[(?<time>\d{2}:\d{2}:\d{2})\]\s+(?<nick>.+?)\s+\((?<id>\d+)\):\s+(?<message>.+)", RegexOptions.Compiled);
-        private static string GroqApiKey = "";
+        private static string OpenRouterApiKey = "";
         private static string BannedWordsPath = "";
+        private static string GptModel = "";
+        private static int MaxTokens = 0;
         private static readonly string ConfigFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "bot_config.txt");
 
         private static string DetectChatLogPath()
@@ -107,32 +109,31 @@ namespace ChatBot
         private static async Task<bool> CheckApiConnectivity()
         {
             Console.WriteLine("🔍 Checking API connectivity...");
-            
-            bool groqConnected = false;
-            
+
+            bool apiConnected = false;
+
             try
             {
-                // Test Groq API
                 string testPrompt = "Hello";
                 string response = await GenerateGptResponse(testPrompt);
-                
-                if (!string.IsNullOrEmpty(response) && response != "(no response)")
+
+                if (!string.IsNullOrEmpty(response) && response != "(no response)" && response != "I will not answer this question.")
                 {
-                    Console.WriteLine("✅ Groq API: Connected");
-                    groqConnected = true;
+                    Console.WriteLine("✅ OpenRouter API: Connected");
+                    apiConnected = true;
                 }
                 else
                 {
-                    Console.WriteLine("❌ Groq API: Failed to get response");
+                    Console.WriteLine("❌ OpenRouter API: Failed to get response");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Groq API: Error - {ex.Message}");
+                Console.WriteLine($"❌ OpenRouter API: Error - {ex.Message}");
             }
 
             Console.WriteLine("--------------------------------");
-            return groqConnected;
+            return apiConnected;
         }
 
         static void Main(string[] args)
@@ -142,7 +143,7 @@ namespace ChatBot
             Console.WriteLine("--------------------------------");
 
             LoadOrRequestConfig();
-            _gptClient = new GroqApiClient(GroqApiKey);
+            _gptClient = new OpenRouterApiClient(OpenRouterApiKey);
 
             bool apiConnected = CheckApiConnectivity().GetAwaiter().GetResult();
             if (!apiConnected)
@@ -416,69 +417,104 @@ namespace ChatBot
 
                 foreach (var line in lines)
                 {
-                    if (line.StartsWith("GROQ_API_KEY=", StringComparison.OrdinalIgnoreCase))
-                        GroqApiKey = line.Substring("GROQ_API_KEY=".Length).Trim();
+                    if (line.StartsWith("OPENROUTER_API_KEY=", StringComparison.OrdinalIgnoreCase))
+                        OpenRouterApiKey = line.Substring("OPENROUTER_API_KEY=".Length).Trim();
 
                     if (line.StartsWith("BANNED_WORDS_PATH=", StringComparison.OrdinalIgnoreCase))
                         BannedWordsPath = line.Substring("BANNED_WORDS_PATH=".Length).Trim();
+
+                    if (line.StartsWith("GPT_MODEL=", StringComparison.OrdinalIgnoreCase))
+                        GptModel = line.Substring("GPT_MODEL=".Length).Trim();
+
+                    if (line.StartsWith("MAX_TOKENS=", StringComparison.OrdinalIgnoreCase))
+                        if (int.TryParse(line.Substring("MAX_TOKENS=".Length).Trim(), out int parsedTokens))
+                            MaxTokens = parsedTokens;
                 }
             }
 
-            if (string.IsNullOrWhiteSpace(GroqApiKey))
+            if (string.IsNullOrWhiteSpace(OpenRouterApiKey))
             {
-                Console.Write("🔑 Enter GROQ API key (create it at https://console.groq.com/keys): ");
-                GroqApiKey = Console.ReadLine()?.Trim();
+                Console.Write("🔑 Enter OpenRouter API key: ");
+                OpenRouterApiKey = Console.ReadLine()?.Trim();
             }
 
             while (string.IsNullOrWhiteSpace(BannedWordsPath) || !File.Exists(BannedWordsPath))
             {
-                Console.Write("📄 Enter FULL path to banned_words.txt (example: C:\\Users\\YourName\\Desktop\\banned_words.txt): ");
+                Console.Write("📄 Enter FULL path to banned_words.txt: ");
                 BannedWordsPath = Console.ReadLine()?.Trim();
+                if (!File.Exists(BannedWordsPath)) Console.WriteLine("❌ File not found. Try again.");
+            }
 
-                if (!File.Exists(BannedWordsPath))
-                    Console.WriteLine("❌ File not found. Try again.");
+            if (string.IsNullOrWhiteSpace(GptModel))
+            {
+                Console.Write("🤖 Enter GPT Model (press Enter for 'qwen/qwen-2.5-72b-instruct'): ");
+                string inputModel = Console.ReadLine()?.Trim();
+                GptModel = string.IsNullOrWhiteSpace(inputModel) ? "qwen/qwen-2.5-72b-instruct" : inputModel;
+            }
+
+            if (MaxTokens <= 0)
+            {
+                Console.Write("⚙️ Enter Max Tokens (press Enter for '150'): ");
+                string inputTokens = Console.ReadLine()?.Trim();
+                MaxTokens = int.TryParse(inputTokens, out int parsed) && parsed > 0 ? parsed : 150;
             }
 
             File.WriteAllLines(ConfigFilePath, new[]
             {
-                $"GROQ_API_KEY={GroqApiKey}",
-                $"BANNED_WORDS_PATH={BannedWordsPath}"
+                $"OPENROUTER_API_KEY={OpenRouterApiKey}",
+                $"BANNED_WORDS_PATH={BannedWordsPath}",
+                $"GPT_MODEL={GptModel}",
+                $"MAX_TOKENS={MaxTokens}"
             });
 
             Console.WriteLine($"✅ Config loaded (saved to {ConfigFilePath})");
+            Console.WriteLine($"   - Model: {GptModel}");
+            Console.WriteLine($"   - Max Tokens: {MaxTokens}");
         }
-
 
         private static async Task<string> GenerateGptResponse(string userInput)
         {
-            string hiddenInstruction = " (Respond in the same language as the question, very concise: 1 short sentence only." +
-                " NO profanity, swearing, or inappropriate language;" +
-                " NO insults, threats, or discrimination;" +
-                " NO political discussions or extreme views;" +
-                " NO references to drugs, illegal substances, or sexual content;" +
-                " NO N-Words;" +
-                " NO personal information sharing;" +
-                " Keep responses friendly, helpful, and appropriate for all ages;" +
-                " If asked about inappropriate topics, politely decline and suggest appropriate alternatives.)";
-
             _gptHistory.Add(new JObject
             {
                 ["role"] = "user",
-                ["content"] = userInput + hiddenInstruction
+                ["content"] = userInput
             });
 
-            int maxMessagesSize = 10;
+            int maxMessagesSize = 4;
             if (_gptHistory.Count > maxMessagesSize)
                 _gptHistory.RemoveRange(0, _gptHistory.Count - maxMessagesSize);
 
+            var messagesToSend = new JArray();
+
+            for (int i = 0; i < _gptHistory.Count; i++)
+            {
+                var msg = (JObject)_gptHistory[i].DeepClone();
+
+                if (i == _gptHistory.Count - 1 && msg["role"]?.ToString() == "user")
+                {
+                    string strictRule = " (Strict rule: Reply in the same language as the user. 1 very short sentence. Max 15 words. NO newlines. Be friendly.)";
+                    msg["content"] = msg["content"]?.ToString() + strictRule;
+                }
+
+                messagesToSend.Add(msg);
+            }
+
             JObject request = new JObject
             {
-                ["model"] = "llama-3.1-8b-instant",
-                ["messages"] = new JArray(_gptHistory)
+                ["model"] = GptModel,
+                ["messages"] = messagesToSend,
+                ["max_tokens"] = MaxTokens
             };
 
             var response = await _gptClient.CreateChatCompletionAsync(request);
             string? aiResponse = response?["choices"]?[0]?["message"]?["content"]?.ToString();
+
+            if (string.IsNullOrWhiteSpace(aiResponse))
+            {
+                return "(API Error)";
+            }
+
+            aiResponse = aiResponse.Replace("\n", " ").Replace("\r", "").Trim();
 
             string[] bannedWords = File.Exists(BannedWordsPath)
                 ? File.ReadAllLines(BannedWordsPath)
@@ -487,39 +523,42 @@ namespace ChatBot
                     .ToArray()
                 : Array.Empty<string>();
 
-
-            if (!string.IsNullOrEmpty(aiResponse) && IsBannedContent(aiResponse, bannedWords))
+            if (IsBannedContent(aiResponse, bannedWords))
             {
                 Console.WriteLine("⚠️ Banned word detected in GPT response.");
                 aiResponse = "I will not answer this question.";
             }
 
-            if (!string.IsNullOrEmpty(aiResponse))
+            _gptHistory.Add(new JObject
             {
-                _gptHistory.Add(new JObject
-                {
-                    ["role"] = "assistant",
-                    ["content"] = aiResponse
-                });
-            }
+                ["role"] = "assistant",
+                ["content"] = aiResponse
+            });
 
-            return aiResponse ?? "(no response)";
+            return aiResponse;
         }
 
         private static bool IsBannedContent(string text, string[] bannedWords)
         {
-            if (string.IsNullOrWhiteSpace(text))
-                return false;
+            if (string.IsNullOrWhiteSpace(text)) return false;
 
-            string normalized = Regex.Replace(text.ToLower(), @"[!@#$%^&*()\[\]{}|\\;:'"",.<>?/0-9_\-\s]+", "", RegexOptions.Compiled);
+            string lowerText = text.ToLower();
+
+            lowerText = lowerText.Replace("@", "a").Replace("0", "o").Replace("1", "i")
+                                 .Replace("3", "e").Replace("$", "s");
 
             foreach (string banned in bannedWords)
             {
                 if (string.IsNullOrWhiteSpace(banned)) continue;
 
-                string pattern = string.Join(@"[\W_0-9]*", banned.Select(c => Regex.Escape(c.ToString())));
-                if (Regex.IsMatch(normalized, pattern, RegexOptions.IgnoreCase))
+                string word = banned.Trim().ToLower();
+
+                string pattern = $@"\b{Regex.Escape(word)}\w*";
+
+                if (Regex.IsMatch(lowerText, pattern, RegexOptions.IgnoreCase))
+                {
                     return true;
+                }
             }
 
             return false;
@@ -577,11 +616,8 @@ namespace ChatBot
             try
             {
                 EmptyClipboard();
-                //выделяем глобальную память под текст
                 IntPtr hGlobal = Marshal.StringToHGlobalUni(text);
-                //передаём os -> теперь Windows владелец!
                 SetClipboardData(13, hGlobal);
-                //НЕ освобождаем hGlobal, иначе краш!
             }
             finally
             {
