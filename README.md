@@ -2,7 +2,7 @@
 
 A simple chat bot for **TruckersMP** (ETS2 / ATS).  
 This bot reads your chat log file and can respond with useful commands.  
-It also connects to **Groq API (LLaMA model)** for AI answers.
+It also connects to **OpenRouter API** for AI answers, allowing you to choose from various powerful models.
 
 <div align="center">
   <img src="https://visitor-badge.laobi.icu/badge?page_id=GitPolyakoff.chatbot-truckersmp" />
@@ -12,7 +12,7 @@ It also connects to **Groq API (LLaMA model)** for AI answers.
 ---
 
 ## ✨ Features
-- `!gpt <text>` → ask AI (LLaMA model via Groq API). The bot will answer in the same language as the question.  
+- `!gpt <text>` → ask AI (via OpenRouter API). The bot will answer in the same language as the question.
 - Works inside the TruckersMP chat (reads the log file).  
 - Filters messages using a **banned words list** to prevent inappropriate content.  
 - Lightweight and easy to use.  
@@ -30,12 +30,19 @@ It also connects to **Groq API (LLaMA model)** for AI answers.
 3. Run `tmp-bot.exe`.
 
 4. On first launch, the app will ask for:
-   - **Groq API key** (create one at [Groq Console](https://console.groq.com/keys))
+   - **OpenRouter API key** (create one at [OpenRouter](https://openrouter.ai/keys))
    - **Path to `banned_words.txt`**  
      Example:
      ```
      C:\Users\YourName\Desktop\banned_words.txt
      ```
+   - **GPT Model** (Press Enter to use the default or type your preferred model). Examples of supported models:
+     - `qwen/qwen-2.5-72b-instruct`
+     - `deepseek/deepseek-r1`
+     - `meta-llama/llama-3.3-70b-instruct`
+     - `openai/gpt-oss-120b`
+     - `openrouter/free`
+   - **Max Tokens** (Recommended: 150)
 
 5. The app will save this configuration automatically. On subsequent launches, no input is required.
 
@@ -125,4 +132,4 @@ Bot: 📅 Events now/soon: Real Operations at 2025-09-20 | Convoy Community Even
 
 - The bot only works while the log file is updating (so you must be in TruckersMP).
 
-- The app automatically saves the API key and banned words path on first launch for future use.
+- The app automatically saves the API key, banned words path, selected model, and max tokens in a config file on first launch for future use.
