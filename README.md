@@ -37,8 +37,9 @@ It also connects to **OpenRouter API** for AI answers, allowing you to choose fr
      C:\Users\YourName\Desktop\banned_words.txt
      ```
    - **GPT Model** (Press Enter to use the default or type your preferred model). Examples of supported models:
-     - `qwen/qwen-2.5-72b-instruct`
+     - `openrouter/owl-alpha`
      - `deepseek/deepseek-r1`
+     - `qwen/qwen-2.5-72b-instruct`
      - `meta-llama/llama-3.3-70b-instruct`
      - `openai/gpt-oss-120b`
      - `openrouter/free`
